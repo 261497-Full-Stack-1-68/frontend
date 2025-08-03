@@ -1,103 +1,285 @@
-import Image from "next/image";
+"use client"
+
+import axios from "axios";
+import { useEffect, useState } from "react";
+import { TodoItem } from "./types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardHeader,
+  CardFooter,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+  TableCaption,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [todos, setTodos] = useState<TodoItem[]>([]);
+  const [inputText, setInputText] = useState("");
+  const [mode, setMode] = useState<"ADD" | "EDIT">("ADD");
+  const [curTodoId, setCurTodoId] = useState("");
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editText, setEditText] = useState("");
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  async function fetchData() {
+    try {
+      const res = await axios.get<TodoItem[]>("/api/todo");
+      setTodos(res.data);
+    } catch (err) {
+      alert("Failed to fetch todos");
+      console.error(err);
+    }
+  }
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setInputText(e.target.value);
+  }
+
+  async function handleSubmit() {
+    if (!inputText.trim()) return;
+
+    try {
+      if (mode === "ADD") {
+        await axios.put("/api/todo", { todoText: inputText });
+        toast.success("Todo added successfully");
+      } else {
+        await axios.patch("/api/todo", {
+          id: curTodoId,
+          todoText: inputText,
+        });
+        toast.success("Todo updated successfully");
+        setMode("ADD");
+        setCurTodoId("");
+      }
+      setInputText("");
+      await fetchData();
+    } catch (err) {
+      toast.error("Submit failed");
+      console.error(err);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    try {
+      await axios.delete("/api/todo", { data: { id } });
+      setMode("ADD");
+      setInputText("");
+      await fetchData();
+      toast.success("Todo deleted successfully");
+    } catch (err) {
+      toast.error("Delete failed");
+      console.error(err);
+    }
+  }
+
+  function handleEdit(item: TodoItem) {
+    setMode("EDIT");
+    setCurTodoId(item.id);
+    setInputText(item.todoText);
+    setEditText(item.todoText);
+    setEditDialogOpen(true);
+  }
+
+  function handleEditInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setEditText(e.target.value);
+  }
+
+  async function handleEditSubmit(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    if (!editText.trim()) return;
+    try {
+      await axios.patch("/api/todo", {
+        id: curTodoId,
+        todoText: editText,
+      });
+      setMode("ADD");
+      setCurTodoId("");
+      setInputText("");
+      setEditDialogOpen(false);
+      setEditText("");
+      await fetchData();
+      toast.success("Todo updated successfully");
+    } catch (err) {
+      toast.error("Edit failed");
+      console.error(err);
+    }
+  }
+
+  function handleCancel() {
+    setMode("ADD");
+    setInputText("");
+    setCurTodoId("");
+  }
+
+  const compareDate = (a: TodoItem, b: TodoItem) =>
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+
+  const formatDateTime = (isoString: string) => {
+    const dateObj = new Date(isoString);
+    const date = dateObj.toLocaleDateString();
+    const time = dateObj.toLocaleTimeString();
+    return { date, time };
+  };
+
+  return (
+    <div className="min-h-screen flex justify-center bg-background">
+      <div className="container mt-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Todo App</CardTitle>
+            <CardDescription>Manage your todos efficiently</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form
+              onSubmit={(e) => {
+                if (mode === "ADD") {
+                  e.preventDefault();
+                  handleSubmit();
+                }
+              }}
+              className="w-full"
+            >
+              <div style={{ display: "flex", gap: "0.5rem", alignItems: "start" }}>
+                <Input
+                  type="text"
+                  onChange={handleChange}
+                  value={inputText}
+                  data-cy="input-text"
+                  placeholder="Enter todo"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && mode === "ADD") {
+                      e.preventDefault();
+                      handleSubmit();
+                    }
+                  }}
+                  disabled={mode === "EDIT"}
+                />
+                <Button
+                  type="submit"
+                  data-cy="submit"
+                  disabled={mode === "EDIT"}
+                >
+                  {mode === "ADD" ? "Submit" : "Update"}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+          <CardFooter className="block">
+            <div data-cy="todo-item-wrapper">
+              <Table>
+                <TableCaption>List of your todos</TableCaption>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>#</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Time</TableHead>
+                    <TableHead>Todo</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {todos.sort(compareDate).map((item, idx) => {
+                    const { date, time } = formatDateTime(item.createdAt);
+                    return (
+                      <TableRow key={item.id}>
+                        <TableCell>{idx + 1}</TableCell>
+                        <TableCell>{date}</TableCell>
+                        <TableCell>{time}</TableCell>
+                        <TableCell data-cy="todo-item-text">{item.todoText}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-col items-center gap-1">
+                            <div className="text-xs text-muted-foreground mb-1">Actions:</div>
+                            <div className="flex flex-row gap-2">
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => handleEdit(item)}
+                                data-cy="todo-item-update"
+                              >
+                                {curTodoId === item.id ? "✍🏻" : "🖊️"}
+                              </Button>
+                              {mode === "ADD" && (
+                                <Button
+                                  variant="destructive"
+                                  size="icon"
+                                  onClick={() => handleDelete(item.id)}
+                                  data-cy="todo-item-delete"
+                                >
+                                  🗑️
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </CardFooter>
+        </Card>
+      </div>
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Todo</DialogTitle>
+            <DialogDescription>Update your todo item below.</DialogDescription>
+          </DialogHeader>
+          <form
+            onSubmit={handleEditSubmit}
+            className="flex flex-col gap-4"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+            <Input
+              type="text"
+              value={editText}
+              onChange={handleEditInputChange}
+              autoFocus
+              data-cy="edit-input-text"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleEditSubmit(e);
+                }
+              }}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="secondary" onClick={handleCancel}>
+                  Cancel
+                </Button>
+              </DialogClose>
+              <Button type="submit" data-cy="edit-submit" disabled={!editText.trim()}>
+                Update
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
