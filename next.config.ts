@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/api/:path*", // ที่ frontend เรียก
-        destination: "http://g09-backend:3000/:path*", // ไปที่ backend จริง
+        destination: "http://g09-backend:3000/:path*", // ไปที่ backend docke จริง
       },
     ];
   },
