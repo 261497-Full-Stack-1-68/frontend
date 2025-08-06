@@ -40,6 +40,7 @@ export default function Home() {
   const [curTodoId, setCurTodoId] = useState("");
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editText, setEditText] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     fetchData();
@@ -47,11 +48,25 @@ export default function Home() {
 
   async function fetchData() {
     try {
-      const res = await axios.get<TodoItem[]>("/api/todo");
+      setIsLoading(true);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const res = await axios.get<TodoItem[]>("/api/todo", {
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
       setTodos(res.data);
     } catch (err) {
-      alert("Failed to fetch todos");
+      if (axios.isAxiosError(err) && err.code === 'ECONNABORTED') {
+        toast.error("Request timeout. Please try again.");
+      } else {
+        toast.error("Failed to fetch todos");
+      }
       console.error(err);
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -144,6 +159,22 @@ export default function Home() {
     const time = dateObj.toLocaleTimeString();
     return { date, time };
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex justify-center bg-background">
+        <div className="container mt-8">
+          <Card>
+            <CardContent>
+              <div className="flex justify-center items-center h-64">
+                <div className="text-lg">Loading todos...</div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex justify-center bg-background">
