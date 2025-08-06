@@ -234,7 +234,8 @@ export default function AnnouncementsPage() {
           <DialogTrigger asChild>
             <Button>
               <Plus className="w-4 h-4 mr-2" />
-              Create New Announcement
+              <span className="hidden sm:inline">Create New Announcement</span>
+              <span className="inline sm:hidden">New</span>
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
