@@ -24,7 +24,7 @@ export default function MemberPage() {
       <Card className="w-full max-w-2xl">
         <CardHeader>
           <CardTitle>Member List</CardTitle>
-          <CardDescription>All registered members</CardDescription>
+          <CardDescription>Member in G09</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-4">
