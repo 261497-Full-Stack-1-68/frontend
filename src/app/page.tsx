@@ -181,7 +181,7 @@ export default function Home() {
       <div className="container mt-8">
         <Card>
           <CardHeader>
-            <CardTitle>Todo App</CardTitle>
+            <CardTitle>Todo App2</CardTitle>
             <CardDescription>Manage your todos efficiently</CardDescription>
           </CardHeader>
           <CardContent>
